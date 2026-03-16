@@ -31,7 +31,8 @@
 当玩家做出选择或游戏开始时，系统严格按照以下顺序执行：
 1. **文本与逻辑生成 (LLM)**: `useGameActions` 调用 `callAI`，LLM 返回包含剧情文本、选项、状态更新以及**双重分镜系统 (visual_sequence)** 的 JSON 数据。`visual_sequence` 包含 `subject_consistency`（视觉锚点）、`action_shot`（动作过程）和 `result_shot`（结果场景）。
 2. **场景图像生成 (Text-to-Image)**: 解析 JSON 后，立即使用提取出的 `visual_sequence` 构建提示词，并调用 `generateImage` 生成当前场景的静态图片。如果 API 支持，会将上一帧图片作为参考图传入以保持视觉连贯性。
-3. **动态视频生成 (Image-to-Video)**: 图像生成完成后，后台异步调用 `generateVideo`，传入上一帧图像（首帧）、动作描述（过程）和新生成的图像（末帧），生成连贯的动作视频并附加到故事板中。
+3. **动态视频生成 (Image-to-Video)**: 图像生成完成后，后台异步调用 `generateVideo`，传入上一帧图像（首帧）、动作描述（过程）和新生成的图像（末帧），生成连贯的动作视频并附加到故事板中。视频播放完毕后，前端会自动提取最后一帧作为下一回合的初始背景图。
+4. **视频合并 (Video Join)**: 游戏结束后，在“回顾旅程”界面，前端调用后端的 `/api/video/join` 接口，使用 `fluent-ffmpeg` 将所有生成的视频片段拼接成一个完整的通关视频，并持久化保存在全局状态中，避免重复合并。
 
 ## 4. 目录结构
 ```text
