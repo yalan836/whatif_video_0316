@@ -9,7 +9,51 @@
 
 ## 2. 核心架构设计
 系统采用**模块化、单向数据流**的设计，将 UI 组件、状态管理和业务逻辑严格分离。
+系统自上而下分为四个核心层级：表现层、应用逻辑层、AI 编排层和基础设施层。
+graph TD
+    %% 表现层
+    subgraph Presentation Layer [表现层 Presentation Layer]
+        UI[React UI Components]
+        Input[NLP Input Capture]
+        Preview[Storyboard/Video Preview]
+    end
 
+    %% 应用逻辑层
+    subgraph Application Logic Layer [应用逻辑层 Application Logic]
+        FSM[有限状态机 FSM Engine]
+        Store[全局状态库 Global Store]
+        OSC_Validator[OSC 状态校验器]
+    end
+
+    %% AI 编排层
+    subgraph AI Orchestration Layer [AI 编排层 AI Orchestration]
+        TPM[分层提示词管理器 Tiered Prompt Manager]
+        Router[模型路由器 Model Router]
+        LLM[推理大模型 Spatial Reasoning]
+        VideoGen[视频/图像生成大模型]
+    end
+
+    %% 基础设施层
+    subgraph Infrastructure Layer [基础设施层 Infrastructure]
+        Proxy[安全代理 Secure Proxy]
+        Metrics[指标收集 Metrics Collector]
+    end
+
+    %% 数据流向
+    UI --> Input
+    Input --> FSM
+    FSM <--> Store
+    FSM --> OSC_Validator
+    OSC_Validator --> TPM
+    TPM --> Router
+    Router --> LLM
+    Router --> VideoGen
+    LLM --> FSM
+    VideoGen --> Preview
+    
+    Proxy --> Router
+    Metrics --> FSM
+    Metrics --> Router
 ### 2.1 状态管理 (Zustand)
 应用状态被拆分为三个独立的 Store，避免不必要的全局重渲染：
 - `gameStore.ts`: 管理核心游戏数据（HP、背包、地图、历史记录、故事板等）。
