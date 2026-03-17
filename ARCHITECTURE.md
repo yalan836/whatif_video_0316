@@ -149,15 +149,62 @@ sequenceDiagram
 4. **视频合并 (Video Join)**: 游戏结束后，在“回顾旅程”界面，前端调用后端的 `/api/video/join` 接口，使用 `fluent-ffmpeg` 将所有生成的视频片段拼接成一个完整的通关视频，并持久化保存在全局状态中，避免重复合并。
 
 ## 7. 目录结构
+本项目的代码库严格按照分层架构进行组织，以确保业务逻辑、UI 渲染和 AI 调度的深度解耦。以下是核心代码目录 `src/` 的详细结构与职责说明：
+
 ```text
-src/
-├── components/       # React UI 组件 (游戏主界面、设置界面、特效等)
-├── hooks/            # 自定义 Hooks (useGameActions)
-├── services/         # 外部服务集成 (aiService)
-├── store/            # Zustand 状态管理 (gameStore, uiStore, settingsStore)
-├── prompts/          # AI Prompt 模板
-├── types.ts          # 全局 TypeScript 类型定义
-├── constants.ts      # 全局常量 (UI 文本等)
-├── App.tsx           # 根组件，负责路由分发
-└── main.tsx          # 入口文件
+whatif_video_0316/
+├── public/                 # 静态资源文件 (图标、全局样式等)
+├── src/
+│   ├── components/         # [表现层] React UI 组件
+│   │   ├── Chat/           # 自然语言输入、多轮对话流组件
+│   │   ├── Config/         # 物理参量配置面板 (重力、材质等滑块)
+│   │   ├── Storyboard/     # 分镜时间轴组件 (渲染视频或草图序列)
+│   │   └── common/         # 全局通用 UI 组件 (按钮、加载动画等)
+│   │
+│   ├── fsm/                # [应用逻辑层] 有限状态机引擎 (核心控制流)
+│   │   ├── FSMachine.js    # 状态机主类 (定义状态节点与扭转逻辑)
+│   │   ├── actions.js      # 状态扭转时触发的副作用函数
+│   │   └── constants.js    # 状态枚举常量 (如 IDLE, SPATIAL_REASONING)
+│   │
+│   ├── store/              # [应用逻辑层] 全局状态管理
+│   │   ├── useAppStore.js  # Zustand/Redux 状态切片 (存储当前假设与推演数据)
+│   │   └── context.js      # 跨组件上下文共享
+│   │
+│   ├── validator/          # [应用逻辑层] OSC 状态校验器 (核心技术壁垒)
+│   │   ├── physics.js      # 物理规则守恒校验逻辑 (重力、碰撞等)
+│   │   ├── logic.js        # 上下文因果连贯性校验
+│   │   └── OSCEngine.js    # 校验器主入口，决定推演结果是否被打回
+│   │
+│   ├── orchestrator/       # [AI 编排层] 模型调度与提示词管理
+│   │   ├── tpm/            # 分层提示词管理器 (Tiered Prompt Manager)
+│   │   │   ├── system.js   # 系统级 Persona 与约束提示词
+│   │   │   └── dynamic.js  # 根据用户输入动态组装环境约束的逻辑
+│   │   ├── router/         # 模型路由器 (Model Router)
+│   │   │   ├── logicRoute.js # 将空间推演任务路由至 LLM (如 GPT-4/Gemini)
+│   │   │   └── visionRoute.js# 将渲染任务路由至 Video/Image 模型
+│   │   └── index.js        # 编排层向外暴露的统一调用接口
+│   │
+│   ├── services/           # [基础设施层] 外部 API 服务对接
+│   │   ├── api.js          # 统一的 Axios/Fetch 封装，处理请求拦截
+│   │   └── proxy.js        # 安全代理配置，处理 API Key 鉴权与脱敏
+│   │
+│   ├── utils/              # [基础设施层] 通用工具与监控
+│   │   ├── metrics.js      # 性能收集器 (统计 OSC 失败率、API 耗时)
+│   │   ├── logger.js       # 全局日志模块
+│   │   └── helpers.js      # 数据格式化等纯函数工具
+│   │
+│   ├── App.jsx             # 表现层根组件，初始化 FSM 与 Store
+│   └── main.jsx            # React 挂载入口
+│
+├── .env.example            # 环境变量配置模板 (包含所需模型 API 占位符)
+├── package.json            # 项目依赖清单与构建脚本
+├── ARCHITECTURE.md         # 架构设计文档 (本文档)
+├── PRD.md                  # 产品需求文档
+└── README.md               # 项目主页文档
 ```
+
+### 目录职责说明
+
+* **`src/validator/` (OSC 校验器)**：这是决定框架推演质量的**最核心目录**。当 AI 编排层返回了空间推演脚本后，数据必须流经 `OSCEngine.js`。只有物理规则 (`physics.js`) 和逻辑连贯性 (`logic.js`) 均返回 `true`，状态机才会允许进入下一步的视觉渲染。
+* **`src/fsm/` (有限状态机)**：所有跨层级的数据流转指令（例如：前端点击发送 -> 触发推演 -> 触发渲染）都不能直接相互调用，必须由 `FSMachine.js` 统一接管和派发，确保复杂异步流程下的状态一致性。
+* **`src/orchestrator/tpm/` (提示词工程)**：这里不存放硬编码的长文本，而是将 Prompt 拆分为“系统设定”、“物理约束”、“输出格式”等多个维度。根据当前场景动态组装，大幅提高了底层 AI 输出格式的稳定性。
