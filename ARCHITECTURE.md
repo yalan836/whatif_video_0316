@@ -10,6 +10,8 @@
 ## 2. 核心架构设计
 系统采用**模块化、单向数据流**的设计，将 UI 组件、状态管理和业务逻辑严格分离。
 系统自上而下分为四个核心层级：表现层、应用逻辑层、AI 编排层和基础设施层。
+
+```mermaid
 graph TD
     %% 表现层
     subgraph Presentation Layer [表现层 Presentation Layer]
@@ -54,6 +56,8 @@ graph TD
     Proxy --> Router
     Metrics --> FSM
     Metrics --> Router
+```
+
 ### 2.1 状态管理 (Zustand)
 应用状态被拆分为三个独立的 Store，避免不必要的全局重渲染：
 - `gameStore.ts`: 管理核心游戏数据（HP、背包、地图、历史记录、故事板等）。
